@@ -7,7 +7,7 @@ const connection = mysql.createConnection({
     host: "localhost",
     user: "root",
     password: "Moo222@",
-    database: "company_roster",
+    database: "company_roster"
 });
 
 // app initialization 
@@ -67,24 +67,24 @@ function addEmployee() {
           {
             type: "input",
             message: "What is the employee's first name?",
-            name: "firstName",
+            name: "firstName"
           },
           {
             type: "input",
             message: "What is the employee's last name?",
-            name: "lastName",
+            name: "lastName"
           },
           {
             type: "list",
             message: "Please select the employee's role",
             choices: rolesArray,
-            name: "role",
+            name: "role"
           },
           {
             type: "list",
             message: "Please select the employee's manager",
             choices: employeeArray,
-            name: "manager",
+            name: "manager"
           }
         ])
         .then(({ firstName, lastName, role, manager }) => {
@@ -126,19 +126,19 @@ function updateEmployeeRole() {
             type: "list",
             message: "Which employee would you like to update?",
             name: "employee",
-            choices: employeeArray,
+            choices: employeeArray
           },
           {
             type: "list",
             message: "Which role would you like to assign the employee?",
             name: "role",
-            choices: rolesArray,
+            choices: rolesArray
           },
           {
             type: "list",
             message: "Please select the employee's new manager",
             choices: managerArray,
-            name: "manager",
+            name: "manager"
           }
         ])
         .then(({ employee, role, manager }) => {
@@ -156,6 +156,98 @@ function updateEmployeeRole() {
   });
 };
 
+// View all roles
+function viewRoles() {
+  connection.query(
+ `SELECT r.id, r.title, r.salary, d.name as 'Department'
+  FROM role r
+  LEFT JOIN department d
+      on r.department_id = d.id;`,
+    (err, data) => {
+    if (err) throw err;
+    console.table(data);
+    init();
+  });
+};
+
+// Add a role
+function addRole() {
+  connection.query(`SELECT * FROM department;`, (err, data) => {
+    if (err) throw err;
+    const departmentsArray = data.map((department) => {
+      return { name: department.name, value: department.id };
+    });
+
+    inquirer
+      .prompt([
+        {
+          type: "input",
+          message: "Please enter the role title:",
+          name: "title",
+        },
+        {
+          type: "input",
+          message: "Please enter the role salary:",
+          name: "salary",
+        },
+        {
+          type: "list",
+          choices: departmentsArray,
+          message: "Please select a department:",
+          name: "department_id"
+        }
+      ])
+      .then(({ title, salary, department_id }) => {
+        connection.query(
+            `INSERT INTO role (title, salary, department_id)
+            VALUE (?, ?, ?);`,
+            [title, salary, department_id],
+            (err, data) => {
+                if (err) throw err;
+                console.log("Your role has been created.");
+                init();
+            }
+        );
+      });
+  });
+};
+
+// View all departments
+function viewDepartments() {
+  connection.query(`SELECT * FROM department;`, (err, data) => {
+    if (err) throw err;
+    console.table(data);
+    init();
+  });
+};
+
+// Add a department
+function addDepartment() {
+  inquirer
+    .prompt([
+      {
+        type: "input",
+        message: "Please enter the name of the department.",
+        name: "department"
+      },
+    ])
+    .then(({ department }) => {
+      connection.query(
+        `INSERT INTO department (name)
+         VALUE (?);`,
+        [department], (err, data) => {
+        if (err) throw err;
+        console.log("Your department has been created.");
+        init();
+      });
+    });
+};
+
+function quit() {
+  console.log("Thank you for using R-Roster!");
+  connection.end();
+};
+
 // Function to initialize app
 function init() {
     inquirer
@@ -164,7 +256,7 @@ function init() {
             type: "list",
             name: "userMenu",
             message: "What would you like to do?",
-            choices: ["View All Employees","Add Employee", "Update Employee Role", "View All Roles","Add Role","View All Departments","Add Department","Quit"]
+            choices: ["View All Employees", "Add Employee", "Update Employee's Role & Manager", "View All Roles", "Add Role", "View All Departments", "Add Department", new inquirer.Separator(), "Quit", new inquirer.Separator()]
         }
       ])
       // Switches to function based on user selection
@@ -176,11 +268,23 @@ function init() {
             case "Add Employee":
                 addEmployee();
                 break;
-            case "Update Employee Role":
+            case "Update Employee's Role & Manager":
                 updateEmployeeRole()
                 break;
+            case "View All Roles":
+                viewRoles();
+                break;
+            case "Add Role":
+                addRole();
+                break;
+            case "View All Departments":
+                viewDepartments();
+                break;
+            case "Add Department":
+                addDepartment();
+                break;
             default:
-                init();
-        }
-      });
+                quit();
+        };
+    });
 };
