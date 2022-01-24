@@ -1,5 +1,5 @@
 const inquirer = require('inquirer');
-const mysql = require('mysql2/promise');
+const mysql = require('mysql2');
 const cTable = require('console.table');
 
 const connection = mysql.createConnection({
@@ -9,8 +9,8 @@ const connection = mysql.createConnection({
     database: "company_roster",
 });
 
-// Function to initialize app
-function init() {
+connection.connect(function (err) {
+    if (err) throw err;
     console.log(`
     ██████╗       ██████╗  ██████╗ ███████╗████████╗███████╗██████╗                                                                   
     ██╔══██╗      ██╔══██╗██╔═══██╗██╔════╝╚══██╔══╝██╔════╝██╔══██╗                                                                  
@@ -26,16 +26,42 @@ function init() {
     ███████╗██║ ╚═╝ ██║██║     ███████╗╚██████╔╝   ██║   ███████╗███████╗       ██║   ██║  ██║██║  ██║╚██████╗██║  ██╗███████╗██║  ██║
     ╚══════╝╚═╝     ╚═╝╚═╝     ╚══════╝ ╚═════╝    ╚═╝   ╚══════╝╚══════╝       ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
 `);
+    init();
+});
+
+//Function to view all employees
+function viewAllEmployees() {
+    connection.query(
+    `SELECT CONCAT(e.first_name," ",e.last_name) AS 'Employee Name', r.title AS 'Role', r.salary AS 'Salary', IFNULL(CONCAT(m.first_name," ",m.last_name),'N/A') AS 'Manager Name'
+    FROM employee e
+    LEFT JOIN employee m ON e.manager_id = m.id
+    INNER JOIN role r ON r.id = e.role_id;`,
+    (err, data) => {
+        if (err) throw err;
+        console.table(data);
+        init();
+    });
+};
+
+// Function to initialize app
+function init() {
     inquirer
       .prompt([
         {
             type: "list",
             name: "userMenu",
             message: "What would you like to do?",
-            choices: ["View All Employees","Add Employee","View All Roles","Add Role","View All Departments","Add Department","Quit",]
+            choices: ["View All Employees","Add Employee","View All Roles","Add Role","View All Departments","Add Department","Quit"]
         }
       ])
-}
-
-// Function call to initialize app
-init();
+      // Switches to function based on user selection
+      .then(({ userMenu }) => {
+        switch (userMenu) {
+            case "View All Employees":
+                viewAllEmployees();
+                break;
+            default:
+                init();
+        }
+      });
+};
